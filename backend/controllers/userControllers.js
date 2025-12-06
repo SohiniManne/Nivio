@@ -11,12 +11,18 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   const userExists = await User.findOne({ email });
+
   if (userExists) {
     res.status(400);
     throw new Error("User already exists");
   }
 
-  const user = await User.create({ name, email, password, pic });
+  const user = await User.create({
+    name,
+    email,
+    password,
+    pic,
+  });
 
   if (user) {
     res.status(201).json({
@@ -34,6 +40,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
 const authUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
+
   const user = await User.findOne({ email });
 
   if (user && (await user.matchPassword(password))) {
@@ -50,4 +57,20 @@ const authUser = asyncHandler(async (req, res) => {
   }
 });
 
-module.exports = { registerUser, authUser };
+// NEW: Search Users Function
+const allUsers = asyncHandler(async (req, res) => {
+  const keyword = req.query.search
+    ? {
+        $or: [
+          { name: { $regex: req.query.search, $options: "i" } },
+          { email: { $regex: req.query.search, $options: "i" } },
+        ],
+      }
+    : {};
+
+  // Find users matching the keyword, but exclude the current logged-in user
+  const users = await User.find(keyword).find({ _id: { $ne: req.user._id } });
+  res.send(users);
+});
+
+module.exports = { registerUser, authUser, allUsers };

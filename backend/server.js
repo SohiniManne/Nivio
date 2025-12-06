@@ -2,7 +2,8 @@ const express = require("express");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
 const cors = require("cors");
-const userRoutes = require("./routes/userRoutes"); // NEW
+const userRoutes = require("./routes/userRoutes");
+const chatRoutes = require("./routes/chatRoutes"); // NEW
 
 dotenv.config();
 connectDB();
@@ -15,8 +16,8 @@ app.get("/", (req, res) => {
   res.send("API is Running Successfully");
 });
 
-// NEW: API Routes
 app.use("/api/user", userRoutes);
+app.use("/api/chat", chatRoutes); // NEW
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, console.log(`Nivio Server started on PORT ${PORT}`));
