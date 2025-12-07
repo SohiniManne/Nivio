@@ -121,8 +121,8 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       data.append("file", file);
       
       // YOUR REAL KEYS
-      data.append("upload_preset", "jxgu55nt"); 
-      data.append("cloud_name", "dlzixmoox");       
+      data.append("upload_preset", "abc"); 
+      data.append("cloud_name", "xyz");       
 
       try {
         const res = await fetch("https://api.cloudinary.com/v1_1/dlzixmoox/image/upload", { 
