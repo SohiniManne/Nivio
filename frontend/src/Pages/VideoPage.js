@@ -11,8 +11,8 @@ const VideoPage = () => {
 
   const myMeeting = async (element) => {
     // Your Real Keys
-    const appID = 1284135392;
-    const serverSecret = "6ff2c726bdcc870870412ad8f743ff3d";
+    const appID = xyz;
+    const serverSecret = "abc";
 
     const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
       appID,
