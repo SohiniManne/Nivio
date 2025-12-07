@@ -10,15 +10,26 @@ const ChatPage = () => {
   const [fetchAgain, setFetchAgain] = useState(false);
 
   return (
-    <div style={{ width: "100%" }}>
+    // FIX: Using Flex Column ensures elements stack properly without overlapping
+    <Box w="100%" h="100vh" display="flex" flexDirection="column">
+      
+      {/* Header Area */}
       {user && <SideDrawer />}
-      <Box d="flex" justifyContent="space-between" w="100%" h="91.5vh" p="10px">
-        {user && <MyChats fetchAgain={fetchAgain} />}
+      
+      {/* Content Area - Takes up remaining space */}
+      <Box 
+        display="flex" 
+        justifyContent="space-between" 
+        w="100%" 
+        flex="1" 
+        overflow="hidden"
+      >
+        {user && <MyChats fetchAgain={fetchAgain} setFetchAgain={setFetchAgain} />}
         {user && (
           <ChatBox fetchAgain={fetchAgain} setFetchAgain={setFetchAgain} />
         )}
       </Box>
-    </div>
+    </Box>
   );
 };
 
