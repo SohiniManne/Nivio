@@ -48,7 +48,7 @@
 | **Authentication** | JWT, BcryptJS |
 
 ---
-Screenshot(Screenshot.png)
+Screenshot(./Screenshot.png)
 
 
 ## ⚙️ Installation & Setup
