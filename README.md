@@ -48,7 +48,7 @@
 | **Authentication** | JWT, BcryptJS |
 
 ---
-Screenshot(./Screenshot.png)
+![Nivio Screenshot](./Screenshot.png)
 
 
 ## ⚙️ Installation & Setup
