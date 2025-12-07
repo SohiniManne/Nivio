@@ -2,14 +2,13 @@ import { Avatar } from "@chakra-ui/avatar";
 import { Tooltip } from "@chakra-ui/tooltip";
 import ScrollableFeed from "react-scrollable-feed";
 import { ChatState } from "../Context/ChatProvider";
-import { useColorModeValue } from "@chakra-ui/react"; // Added hook
+import { useColorModeValue, Image } from "@chakra-ui/react"; // Just Image needed
 
 const ScrollableChat = ({ messages }) => {
   const { user } = ChatState();
 
-  // DYNAMIC COLORS
-  const myMsgBg = useColorModeValue("#D9FDD3", "#005C4B"); // Light Green vs Dark Green
-  const otherMsgBg = useColorModeValue("#FFFFFF", "#202C33"); // White vs Dark Gray
+  const myMsgBg = useColorModeValue("#D9FDD3", "#005C4B");
+  const otherMsgBg = useColorModeValue("#FFFFFF", "#202C33");
   const textColor = useColorModeValue("black", "white");
 
   const isSameSender = (messages, m, i, userId) => {
@@ -27,6 +26,11 @@ const ScrollableChat = ({ messages }) => {
       messages[messages.length - 1].sender._id !== userId &&
       messages[messages.length - 1].sender._id
     );
+  };
+
+  // Simple Image Check
+  const isImage = (url) => {
+    return /\.(jpeg|jpg|gif|png|webp|svg)$/i.test(url);
   };
 
   return (
@@ -56,13 +60,25 @@ const ScrollableChat = ({ messages }) => {
                 marginLeft: isSameSender(messages, m, i, user._id) ? 0 : 33,
                 marginTop: isSameSender(messages, m, i, user._id) ? 3 : 10,
                 borderRadius: "10px",
-                padding: "8px 15px",
+                padding: isImage(m.content) ? "5px" : "8px 15px",
                 maxWidth: "75%",
                 boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-                fontSize: "15px",
+                wordWrap: "break-word",
               }}
             >
-              {m.content}
+              {/* DISPLAY LOGIC: Image OR Text */}
+              {isImage(m.content) ? (
+                <Image
+                  src={m.content}
+                  borderRadius="10px"
+                  maxH="300px"
+                  objectFit="cover"
+                  cursor="pointer"
+                  onClick={() => window.open(m.content, "_blank")}
+                />
+              ) : (
+                m.content
+              )}
             </span>
           </div>
         ))}
