@@ -5,12 +5,14 @@ const cors = require("cors");
 const userRoutes = require("./routes/userRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const messageRoutes = require("./routes/messageRoutes");
+const { notFound, errorHandler } = require("./middleware/errorMiddleware"); // If you don't have this file, you can remove this line and the app.use below
 
 dotenv.config();
 connectDB();
 
 const app = express();
-app.use(express.json());
+
+app.use(express.json()); // to accept JSON data
 app.use(cors());
 
 app.get("/", (req, res) => {
@@ -21,14 +23,21 @@ app.use("/api/user", userRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/message", messageRoutes);
 
+// Error Handling middlewares (Optional: If you created errorMiddleware.js)
+// app.use(notFound);
+// app.use(errorHandler);
+
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, console.log(`Nivio Server started on PORT ${PORT}`));
+const server = app.listen(
+  PORT,
+  console.log(`Nivio Server started on PORT ${PORT}`)
+);
 
 const io = require("socket.io")(server, {
   pingTimeout: 60000,
   cors: {
-    origin: "http://localhost:3000", // Allow the frontend to connect
+    origin: "http://localhost:3000",
   },
 });
 
@@ -45,6 +54,13 @@ io.on("connection", (socket) => {
     console.log("User Joined Room: " + room);
   });
 
+  // -------------------------------------------------------
+  // NEW: TYPING LOGIC
+  // -------------------------------------------------------
+  socket.on("typing", (room) => socket.in(room).emit("typing"));
+  socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
+  // -------------------------------------------------------
+
   socket.on("new message", (newMessageRecieved) => {
     var chat = newMessageRecieved.chat;
 
@@ -55,5 +71,10 @@ io.on("connection", (socket) => {
 
       socket.in(user._id).emit("message recieved", newMessageRecieved);
     });
+  });
+
+  socket.off("setup", () => {
+    console.log("USER DISCONNECTED");
+    socket.leave(userData._id);
   });
 });

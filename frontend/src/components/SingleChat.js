@@ -14,17 +14,20 @@ import { Link } from "react-router-dom";
 const ENDPOINT = "http://localhost:5000";
 var socket, selectedChatCompare;
 
-// CHANGED: Export const directly implies named export, but we will do it at the bottom to be safe.
 const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [socketConnected, setSocketConnected] = useState(false);
+  
+  // NEW STATES FOR TYPING
+  const [typing, setTyping] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
 
   const { user, selectedChat, setSelectedChat } = ChatState();
   const toast = useToast();
 
-  // HOOKS
+  // COLORS
   const headerBg = useColorModeValue("#F0F2F5", "#202C33");
   const chatBg = useColorModeValue("#EFEAE2", "#0B141A");
   const inputBg = useColorModeValue("white", "#2A3942");
@@ -48,19 +51,13 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
 
       socket.emit("join chat", selectedChat._id);
     } catch (error) {
-      toast({
-        title: "Error Occured!",
-        description: "Failed to Load the Messages",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-        position: "bottom",
-      });
+      toast({ status: "error", title: "Failed to Load Messages", duration: 5000 });
     }
   };
 
   const sendMessage = async (event) => {
     if (event.key === "Enter" && newMessage) {
+      socket.emit("stop typing", selectedChat._id); // Stop typing when sent
       try {
         const config = {
           headers: {
@@ -78,22 +75,44 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
         socket.emit("new message", data);
         setMessages([...messages, data]);
       } catch (error) {
-        toast({
-          title: "Error Occured!",
-          description: "Failed to send the Message",
-          status: "error",
-          duration: 5000,
-          isClosable: true,
-          position: "bottom",
-        });
+        toast({ status: "error", title: "Failed to send Message", duration: 5000 });
       }
     }
+  };
+
+  // NEW: Typing Handler Logic
+  const typingHandler = (e) => {
+    setNewMessage(e.target.value);
+
+    // Typing Indicator Logic
+    if (!socketConnected) return;
+
+    if (!typing) {
+      setTyping(true);
+      socket.emit("typing", selectedChat._id);
+    }
+
+    // Debouncing: Stop showing "typing" if user stops for 3 seconds
+    let lastTypingTime = new Date().getTime();
+    var timerLength = 3000;
+    setTimeout(() => {
+      var timeNow = new Date().getTime();
+      var timeDiff = timeNow - lastTypingTime;
+      if (timeDiff >= timerLength && typing) {
+        socket.emit("stop typing", selectedChat._id);
+        setTyping(false);
+      }
+    }, timerLength);
   };
 
   useEffect(() => {
     socket = io(ENDPOINT);
     socket.emit("setup", user);
     socket.on("connected", () => setSocketConnected(true));
+    
+    // Listen for typing events
+    socket.on("typing", () => setIsTyping(true));
+    socket.on("stop typing", () => setIsTyping(false));
   }, []);
 
   useEffect(() => {
@@ -108,7 +127,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
         !selectedChatCompare ||
         selectedChatCompare._id !== newMessageRecieved.chat._id
       ) {
-        // notification logic
+        // notification
       } else {
         setMessages([...messages, newMessageRecieved]);
       }
@@ -123,6 +142,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     <>
       {selectedChat ? (
         <>
+          {/* HEADER */}
           <Box
             fontSize={{ base: "28px", md: "30px" }}
             pb={3}
@@ -143,26 +163,26 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
               onClick={() => setSelectedChat("")}
             />
 
-            <Text fontSize="xl" fontWeight="500">
-              {!selectedChat.isGroupChat
-                ? getSender(user, selectedChat.users).name
-                : selectedChat.chatName.toUpperCase()}
-            </Text>
+            <Box>
+                <Text fontSize="xl" fontWeight="500">
+                {!selectedChat.isGroupChat
+                    ? getSender(user, selectedChat.users).name
+                    : selectedChat.chatName.toUpperCase()}
+                </Text>
+                {/* Typing Indicator in Header (WhatsApp Style) */}
+                {isTyping && (
+                   <Text fontSize="xs" color="green.400" fontWeight="bold">
+                       typing...
+                   </Text>
+                )}
+            </Box>
 
             <Box display="flex" alignItems="center">
               <Link to={`/video/${selectedChat._id}?audio=true`}>
-                <IconButton
-                  display={{ base: "flex" }}
-                  icon={<PhoneIcon color={iconColor} />}
-                  bg="transparent"
-                />
+                <IconButton display={{ base: "flex" }} icon={<PhoneIcon color={iconColor} />} bg="transparent" />
               </Link>
               <Link to={`/video/${selectedChat._id}`}>
-                <IconButton
-                  display={{ base: "flex" }}
-                  icon={<ViewIcon color={iconColor} />}
-                  bg="transparent"
-                />
+                <IconButton display={{ base: "flex" }} icon={<ViewIcon color={iconColor} />} bg="transparent" />
               </Link>
               {!selectedChat.isGroupChat && (
                 <ProfileModal user={getSender(user, selectedChat.users)} />
@@ -170,6 +190,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
             </Box>
           </Box>
 
+          {/* CHAT BODY */}
           <Box
             display="flex"
             flexDir="column"
@@ -184,15 +205,17 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
             {loading ? (
               <Spinner size="xl" w={20} h={20} alignSelf="center" margin="auto" />
             ) : (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  overflowY: "scroll",
-                  scrollbarWidth: "none",
-                }}
-              >
+              <div style={{ display: "flex", flexDirection: "column", overflowY: "scroll", scrollbarWidth: "none" }}>
                 <ScrollableChat messages={messages} />
+                
+                {/* ALTERNATIVE: Typing Bubble at bottom (Optional, kept commented out if you prefer header) */}
+                {/* {isTyping && (
+                  <div style={{ marginBottom: 15, marginLeft: 10 }}>
+                     <p style={{backgroundColor: "#fff", padding: "5px 15px", borderRadius: "20px", width: "fit-content"}}>
+                        Typing...
+                     </p>
+                  </div>
+                )} */}
               </div>
             )}
 
@@ -204,7 +227,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                   color={textColor}
                   placeholder="Type a message..."
                   _placeholder={{ color: placeholderColor }}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={typingHandler} // Changed from setNewMessage to typingHandler
                   value={newMessage}
                   p={3}
                   borderRadius="20px"
@@ -215,13 +238,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
           </Box>
         </>
       ) : (
-        <Box
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          h="100%"
-          bg={chatBg}
-        >
+        <Box display="flex" alignItems="center" justifyContent="center" h="100%" bg={chatBg}>
           <Text fontSize="3xl" pb={3} fontFamily="Work sans" color="gray.500">
             Click on a user to start chatting
           </Text>
@@ -231,5 +248,4 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   );
 };
 
-// FIX: Named Export instead of Default
 export { SingleChat };
